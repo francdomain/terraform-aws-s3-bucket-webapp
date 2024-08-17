@@ -1,6 +1,3 @@
-# Copyright (c) HashiCorp, Inc.
-# SPDX-License-Identifier: MPL-2.0
-
 resource "aws_s3_bucket" "bucket" {
   bucket_prefix = "${var.prefix}-${var.name}"
 
@@ -10,10 +7,14 @@ resource "aws_s3_bucket" "bucket" {
 resource "aws_s3_bucket_public_access_block" "bucket" {
   bucket = aws_s3_bucket.bucket.id
 
-  block_public_acls       = false
+  block_public_acls       = true
   block_public_policy     = false
-  ignore_public_acls      = false
+  ignore_public_acls      = true
   restrict_public_buckets = false
+
+  depends_on = [
+    aws_s3_bucket_ownership_controls.bucket,
+  ]
 }
 
 resource "aws_s3_bucket_ownership_controls" "bucket" {
@@ -35,15 +36,15 @@ resource "aws_s3_bucket_website_configuration" "bucket" {
   }
 }
 
-resource "aws_s3_bucket_acl" "bucket" {
-  depends_on = [
-    aws_s3_bucket_public_access_block.bucket,
-    aws_s3_bucket_ownership_controls.bucket,
-  ]
-  bucket = aws_s3_bucket.bucket.id
+# resource "aws_s3_bucket_acl" "bucket" {
+#   acl    = "public-read"
+#   bucket = aws_s3_bucket.bucket.id
 
-  acl = "public-read"
-}
+#   depends_on = [
+#     aws_s3_bucket_public_access_block.bucket,
+#     aws_s3_bucket_ownership_controls.bucket,
+#   ]
+# }
 
 resource "aws_s3_bucket_policy" "policy" {
   bucket = aws_s3_bucket.bucket.id
@@ -68,9 +69,13 @@ EOF
 }
 
 resource "aws_s3_object" "webapp" {
-  acl          = "public-read"
+  # acl          = "public-read"
   key          = "index.html"
   bucket       = aws_s3_bucket.bucket.id
   content      = file("${path.module}/assets/index.html")
   content_type = "text/html"
+
+  depends_on = [
+    aws_s3_bucket_policy.policy,
+  ]
 }
